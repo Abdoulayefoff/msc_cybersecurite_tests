@@ -1,0 +1,29 @@
+# Créer les groupes  
+$groupList = @("Animation", "As", "Médical", "Cadres", "Hébergement", "Technique", "Administratif", "Comptable", "cadre de santé", "Maîtresse de Maison")  
+foreach ($group in $groupList) {  
+    New-ADGroup -Name $group -GroupScope Global -Path "CN=Users,DC=laplateforme,DC=io"  
+}  
+
+# Importer les utilisateurs  
+$users = Import-Csv -Path "C:\Users\Administrator\Documents\utilisateurs.csv" -Delimiter ","  
+
+foreach ($user in $users) {  
+    $username = ($user.prénom.ToLower() + "." + $user.nom.ToLower())  
+    $password = ConvertTo-SecureString "Azerty_2025!" -AsPlainText -Force  
+
+    New-ADUser `  
+        -GivenName $user.prénom `  
+        -Surname $user.nom `  
+        -Name "$($user.prénom) $($user.nom)" `  
+        -SamAccountName $username `  
+        -UserPrincipalName "$username@laplateforme.io" `  
+        -AccountPassword $password `  
+        -Enabled $true `  
+        -ChangePasswordAtLogon $true  
+
+    # Assignation aux groupes  
+    $groups = $user.PSObject.Properties.Value | Where-Object { $_ -ne "" } | Select-Object -Skip 2  
+    foreach ($group in $groups) {  
+        Add-ADGroupMember -Identity $group -Members $username  
+    }  
+}  
